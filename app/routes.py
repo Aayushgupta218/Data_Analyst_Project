@@ -1,3 +1,6 @@
+import os
+import json
+import tempfile
 from flask import Blueprint, render_template, redirect, url_for
 from .forms import SurveyForm
 import gspread
@@ -6,12 +9,27 @@ from datetime import datetime
 
 main_bp = Blueprint('main', __name__)
 
+def get_google_credentials():
+    """Get Google credentials from environment variable or file"""
+    creds_json = os.getenv('GOOGLE_CREDENTIALS')
+    
+    if creds_json:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+            temp_file.write(creds_json)
+            return temp_file.name
+    return None
+
 scope = [
     'https://spreadsheets.google.com/feeds',
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets'
 ]
-credentials = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+
+creds_path = get_google_credentials()
+if not creds_path:
+    raise ValueError("Google credentials not found in environment variables")
+
+credentials = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
 gc = gspread.authorize(credentials)
 sheet = gc.open_by_key("17oD8q47t7MRAJ0RMV4SnAmcokt4ZB-ytUZ7Mpqi_ox4").sheet1
 
